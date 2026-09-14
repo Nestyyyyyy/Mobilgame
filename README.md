@@ -46,7 +46,7 @@ Ya da repoyu GitHub Pages ile yayınlayıp linki telefonda açabilirsin.
 - Kısa sürede art arda vurursan **KOMBO** artar; en yüksek kombo **REKOR** olarak tarayıcıda saklanır.
 - Kısa sürede çok vurursan kızar: "Yeter artık ya!"
 - Gözleri parmağını / fare imlecini takip eder, arada göz kırpar.
-- Klavye: `1`–`9` eşya seçer, `Boşluk` vurur, `R` ayıltır.
+- Klavye: `1`–`9` eşya seçer, `Boşluk` vurur, `R` ayıltır, `O` ayarları açar.
 
 ## Teknik
 

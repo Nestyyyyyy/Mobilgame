@@ -35,6 +35,37 @@
   #bar button:focus-visible { outline: 2px solid #ffcf3f; outline-offset: 2px; }
   #bar button.sel { background: #ffcf3f; color: #1b1418; border-color: #fff2b0; box-shadow: 0 0 0 2px #6e0f1e; }
   #bar button.peace { background: #1f4a33; color: #bfe8c9; border-color: #3f8a5a; }
+  #bar button.gear { background: #2b2b36; color: #cfd6ff; border-color: #4a4a62; }
+  #bar button.gear .ico { font-size: 26px; line-height: 36px; height: 36px; color: #cfd6ff; }
+  #settings[hidden] { display: none; }
+  #settings {
+    position: fixed; inset: 0; background: rgba(27,20,24,.82); display: flex; align-items: center; justify-content: center;
+    padding: 16px; z-index: 10;
+  }
+  #settings .panel {
+    width: min(100%, 360px); max-height: 100%; overflow-y: auto; background: #2a1e22; border: 3px solid #ffcf3f; border-radius: 4px;
+    box-shadow: 0 6px 0 #1b1418; padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 14px;
+  }
+  #settings h2 { margin: 0; font-size: 12px; color: #ffcf3f; letter-spacing: 1px; }
+  #settings h3 { margin: 0 0 8px; font-size: 8px; color: #9c8f7a; letter-spacing: 1px; }
+  .chars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .chars button {
+    border: 2px solid #3a2a2e; border-radius: 3px; background: #1b1418; color: #d9c9a0; cursor: pointer; padding: 8px 4px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px; font: 7px/1.4 "Press Start 2P", "Courier New", monospace;
+  }
+  .chars button img { width: 52px; height: 64px; image-rendering: pixelated; }
+  .chars button.sel { border-color: #ffcf3f; background: #3a2a2e; color: #fff2b0; }
+  .chars button:focus-visible { outline: 2px solid #ffcf3f; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 8px; line-height: 1.5; }
+  .row small { display: block; color: #9c8f7a; font-size: 6px; margin-top: 4px; }
+  .tog { flex: 0 0 auto; width: 64px; height: 30px; border: 2px solid #3a2a2e; border-radius: 3px; background: #1b1418; color: #9c8f7a; font: 8px "Press Start 2P", "Courier New", monospace; cursor: pointer; }
+  .tog.on { background: #3f8a5a; color: #fff; border-color: #6fc48a; }
+  .tog:disabled { opacity: .45; cursor: not-allowed; }
+  .big {
+    padding: 12px 18px; border: 3px solid #1b1418; border-radius: 3px; background: #ffcf3f; color: #1b1418;
+    font: 11px "Press Start 2P", "Courier New", monospace; box-shadow: 0 4px 0 #1b1418; cursor: pointer; align-self: center;
+  }
+  .big:active { transform: translateY(3px); box-shadow: 0 1px 0 #1b1418; }
   #tip {
     position: fixed; bottom: 100px; left: 0; right: 0; text-align: center;
     color: #fff2b0; font-size: 8px; line-height: 1.6; pointer-events: none; opacity: .95; transition: opacity 1s;
@@ -60,6 +91,15 @@
 <canvas id="g"></canvas>
 <div id="tip">Alttan eşya seç, kafasına dokun!</div>
 <div id="ko" hidden><div class="t">K.O.</div><div class="s">Bayıldı. Ayıltmak ister misin?</div><button id="revive">AYILT</button></div>
+<div id="settings" hidden>
+  <div class="panel" role="dialog" aria-labelledby="stitle">
+    <h2 id="stitle">AYARLAR</h2>
+    <div><h3>KARAKTER</h3><div class="chars" id="chars"></div></div>
+    <div class="row"><span>KAN EFEKTİ<small id="bloodNote"></small></span><button class="tog" id="togBlood">AÇIK</button></div>
+    <div class="row"><span>SES</span><button class="tog" id="togSound">AÇIK</button></div>
+    <button class="big" id="closeSettings">TAMAM</button>
+  </div>
+</div>
 <div id="bar"></div>
 <script>
 (() => {
@@ -86,13 +126,15 @@ const C = {
   wood: '#e0b060', woodD: '#a87a3a', bagK: '#25252b', bagG: '#4a4a52', swoosh: '#b9b9c2',
   felt: '#3b3b44', cream: '#f4e6d2', pink: '#f28ca4', tin: '#9ea3ad', fish: '#6f8fb0', fishL: '#a9c3d9', fishD: '#4a6580',
   gunG: '#4caf50', gunO: '#ff8c1a', gunD: '#2e7d32', water: '#7fb2e6', waterL: '#c5e1ff',
+  al: '#6fcf6a', alD: '#3f9a45', alL: '#a6e8a0', alEye: '#0d0f14', alGlow: '#b9ffb0', alBall: '#ff7bd5', alSuit: '#c9ced9', alSuitD: '#8f96a6', alSuitL: '#eef1f7', alBlood: '#c04dff', alBloodD: '#6a1fa8',
+  mt: '#9aa3b0', mtD: '#5f6773', mtL: '#d5dbe4', screen: '#0e1a24', cyan: '#5ff2ff', cyanD: '#1e8fa0', rlight: '#ff4d4d', oil: '#1a1a20', oilD: '#0a0a0e', bolt: '#c7cdd6',
   hud: '#f2e6c9', hudDim: '#9c8f7a', gold: '#ffcf3f', white: '#ffffff', star: '#ffcf3f', zz: '#6f8fd8', heart: '#e8506a',
   hpG: '#5fc76a', hpY: '#ffcf3f', hpR: '#e8433f',
 };
 
 // ---------- Kafa sprite (26x32) ----------
 // o=çizgi H=saç h=saç ışığı d=saç gölgesi S=ten s=ten gölgesi
-const HEAD = [
+const HEAD_STUDENT = [
   '.........oooooooo.........',
   '.......ooHHHHHHHHoo.......',
   '.....ooHHHhHHHHHHHHoo.....',
@@ -126,8 +168,99 @@ const HEAD = [
   '.........ooSSSSoo.........',
   '..........oooooo..........',
 ];
-const HEAD_MAP = { o: C.out, H: C.hair, h: C.hairL, d: C.hairD, S: C.skin, s: C.skinD };
-const HW = 26, HH = 32, HCX = 13; // sprite boyutu, merkez sütun
+const HEAD_ALIEN = [
+  '.....oo............oo.....',
+  '....oBBo..........oBBo....',
+  '....oBBo..........oBBo....',
+  '.....oo............oo.....',
+  '.....oo............oo.....',
+  '......oooooooooooooo......',
+  '....ooGGGGGGGGGGGGGGoo....',
+  '...oGGGLGGGGGGGGGGGGGGo...',
+  '..oGGGLLGGGGGGGGGGGGGGGo..',
+  '.oGGGGLGGGGGGGGGGGGGGGGGo.',
+  '.oGGGGGGGGGGGGGGGGGGGGGGo.',
+  'oGGGGGGGGGGGGGGGGGGGGGGGGo',
+  'oGGGGGGGGGGGGGGGGGGGGGGGGo',
+  'oGGGGGGGGGGGGGGGGGGGGGGGGo',
+  'oGGGGGGGGGGGGGGGGGGGGGGGGo',
+  'oGGGGGGGGGGGGGGGGGGGGGGGGo',
+  'oGGGGGGGGGGGGGGGGGGGGGGGGo',
+  'oDGGGGGGGGGGGGGGGGGGGGGGDo',
+  '.oDGGGGGGGGGGGGGGGGGGGGDo.',
+  '.oDGGGGGGGGGGGGGGGGGGGGDo.',
+  '..oDGGGGGGGGGGGGGGGGGGDo..',
+  '..oDGGGGGGGGGGGGGGGGGGDo..',
+  '...oDGGGGGGGGGGGGGGGGDo...',
+  '...oDGGGGGGGGGGGGGGGGDo...',
+  '....oDGGGGGGGGGGGGGGDo....',
+  '.....oDGGGGGGGGGGGGDo.....',
+  '......oDGGGGGGGGGGDo......',
+  '.......oDGGGGGGGGDo.......',
+  '........oDGGGGGGDo........',
+  '.........oDGGGGDo.........',
+  '..........oGGGGo..........',
+  '..........oooooo..........',
+];
+const HEAD_ROBOT = [
+  '............oo............',
+  '...........oRRo...........',
+  '...........oRRo...........',
+  '............oo............',
+  '............oo............',
+  '.....oooooooooooooooo.....',
+  '....oMMMMMMMMMMMMMMMMo....',
+  '...oMLLMMMMMMMMMMMMMMMo...',
+  '..oMLMMMMMMMMMMMMMMMMMMo..',
+  '..oMMMMMMMMMMMMMMMMMMMMo..',
+  '..oMoooooooooooooooooMMo..',
+  '..oMoSSSSSSSSSSSSSSSoMMo..',
+  '..oMoSSSSSSSSSSSSSSSoMMo..',
+  '..oMoSSSSSSSSSSSSSSSoMMo..',
+  'ooMMoSSSSSSSSSSSSSSSoMMMoo',
+  'oNoMoSSSSSSSSSSSSSSSoMoNo.',
+  'ooMMoSSSSSSSSSSSSSSSoMMMoo',
+  '..oMoSSSSSSSSSSSSSSSoMMo..',
+  '..oMoSSSSSSSSSSSSSSSoMMo..',
+  '..oMoSSSSSSSSSSSSSSSoMMo..',
+  '..oMoSSSSSSSSSSSSSSSoMMo..',
+  '..oMoooooooooooooooooMMo..',
+  '..oMMMMMMMMMMMMMMMMMMMMo..',
+  '..oMMMMMMMMMMMMMMMMMMMMo..',
+  '..oMDDDDDDDDDDDDDDDDDDMo..',
+  '..oMDLDLDLDLDLDLDLDLDDMo..',
+  '..oMDDDDDDDDDDDDDDDDDDMo..',
+  '..oMMMMMMMMMMMMMMMMMMMMo..',
+  '...oMMMMMMMMMMMMMMMMMMo...',
+  '....oooooooooooooooooo....',
+  '..........oMMMMo..........',
+  '..........oooooo..........',
+];
+const HW = 26, HH = 32, HCX = 13;
+
+// ---------- Karakterler ----------
+const CHARS = {
+  student: {
+    name: 'ÖĞRENCİ', rows: HEAD_STUDENT, map: { o: C.out, H: C.hair, h: C.hairL, d: C.hairD, S: C.skin, s: C.skinD },
+    blood: null, bruise: [C.bruise, C.bruise2, C.bruiseOld], swell: C.swell,
+    lines: null, ko: ['Pes... ettim...', 'Anne...', 'Zil çaldı mı?'], revive: ['Yine mi?', 'Neredeyim ben?', 'Az kaldı be!'],
+    low: ['Dayanamıyorum...', 'Gözüm kararıyor', 'Biraz ara ver...'], angry: 'Yeter artık ya!', hello: 'Selam! Vurma ama...',
+  },
+  alien: {
+    name: 'UZAYLI', rows: HEAD_ALIEN, map: { o: C.out, G: C.al, D: C.alD, L: C.alL, B: C.alBall },
+    blood: { a: C.alBlood, b: C.alBloodD }, bruise: ['#2f6f3a', '#3a4f8a', '#7a8a3a'], swell: '#8fe08a',
+    lines: ['Zort!', 'Gezegenime döneceğim!', 'İnsanlar vahşi!', 'Annem duyacak!', 'Işınla beni!', 'Bip bop AY!'],
+    ko: ['Gemi... nerede...', 'Mars\'a... selam...', 'Zzzort...'], revive: ['Yeniden doğdum!', 'Işınlandım!', 'Bu gezegen tuhaf!'],
+    low: ['Kanım akıyor!', 'Mor görüyorum...', 'Anten titriyor!'], angry: 'Lazerimi getirin!', hello: 'Selam dünyalı!',
+  },
+  robot: {
+    name: 'ROBOT', rows: HEAD_ROBOT, map: { o: C.out, M: C.mt, D: C.mtD, L: C.mtL, S: C.screen, R: C.rlight, N: C.bolt },
+    blood: { a: C.oil, b: C.oilD, oil: true }, bruise: ['#4a515c', '#3a404a', '#5f6773'], swell: '#7d8692',
+    lines: ['BEEP!', 'Sistem hatası!', 'Vida düştü!', 'Hata 404: yüz bulunamadı', 'Yeniden başlatılıyor...', 'Bzzzt!'],
+    ko: ['Kapanıyor...', 'Pil %0', 'Bzz... zzz...'], revive: ['Sistem yüklendi', 'Yeniden başlatıldı!', 'Güncelleme tamam'],
+    low: ['Yağ sızıyor!', 'Devre yanıyor!', 'Uyarı: hasar!'], angry: 'İNSAN TESPİT EDİLDİ!', hello: 'Merhaba insan.',
+  },
+};
 
 // ---------- Eşya sprite'ları ----------
 const SPR = {
@@ -204,8 +337,6 @@ const ITEMS = [
   { id: 'peace',   name: 'BARIŞ',   kind: 'peace', lines: ['Tamam, barıştık!', 'Süper, dostuz!', 'Helal olsun!'] },
 ];
 const MISS_LINES = ['Iska!', 'Tutturamadın!', 'Buradayım!'];
-const KO_LINES = ['Pes... ettim...', 'Anne...', 'Zil çaldı mı?'];
-const REVIVE_LINES = ['Yine mi?', 'Neredeyim ben?', 'Az kaldı be!'];
 const SPLAT = {
   tomato: { a: C.tomD, b: C.tom, drip: true },
   snow:   { a: C.snowD, b: C.snow },
@@ -213,6 +344,13 @@ const SPLAT = {
   chalk:  { a: '#e6e2d8', b: '#ffffff' },
   water:  { a: 'rgba(120,170,230,0.6)', b: 'rgba(190,220,255,0.7)', drip: true },
 };
+
+// ---------- Ayarlar ----------
+let cfg = { char: 'student', blood: true, sound: true };
+try { Object.assign(cfg, JSON.parse(localStorage.getItem('sk_cfg') || '{}')); } catch (e) {}
+if (!CHARS[cfg.char]) cfg.char = 'student';
+let CH = CHARS[cfg.char];
+function saveCfg() { try { localStorage.setItem('sk_cfg', JSON.stringify(cfg)); } catch (e) {} }
 
 // ---------- Canvas ----------
 const cv = document.getElementById('g');
@@ -225,6 +363,7 @@ let cg = g; // aktif çizim bağlamı
 const bar = document.getElementById('bar');
 const tipEl = document.getElementById('tip');
 const koEl = document.getElementById('ko');
+const setEl = document.getElementById('settings');
 let W = 0, H = 0, S = 3, K = 3, HX = 0, HT = 0; // K: kafa ölçeği, HX: kafa merkezi x, HT: kafa üst y
 
 function resize() {
@@ -251,6 +390,7 @@ function audio() {
   return actx;
 }
 function tone(f0, f1, dur, type, vol) {
+  if (!cfg.sound) return;
   const a = audio(); if (!a) return;
   const o = a.createOscillator(), gn = a.createGain();
   o.type = type || 'square';
@@ -262,6 +402,7 @@ function tone(f0, f1, dur, type, vol) {
   o.start(); o.stop(a.currentTime + dur);
 }
 function noise(dur, cutoff, vol, hp) {
+  if (!cfg.sound) return;
   const a = audio(); if (!a) return;
   const n = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
@@ -280,6 +421,8 @@ const SFX = {
   giggle: () => { tone(700, 900, 0.06, 'triangle', 0.05); setTimeout(() => tone(800, 1000, 0.06, 'triangle', 0.05), 90); setTimeout(() => tone(900, 1100, 0.06, 'triangle', 0.05), 180); },
   crunch: () => { noise(0.1, 3000, 0.25, true); tone(400, 200, 0.05, 'square', 0.03); },
   swish:  () => { noise(0.12, 2500, 0.1, true); },
+  squirt: () => { noise(0.15, 1200, 0.2); tone(250, 80, 0.12, 'sawtooth', 0.04); },
+  clank:  () => { tone(1200, 300, 0.1, 'square', 0.05); noise(0.08, 4000, 0.2, true); },
   peace:  () => { tone(500, 750, 0.12, 'triangle', 0.06); setTimeout(() => tone(750, 1000, 0.18, 'triangle', 0.06), 120); },
   ko:     () => { tone(300, 60, 0.6, 'sawtooth', 0.08); setTimeout(() => noise(0.3, 300, 0.3), 200); },
   revive: () => { [400, 500, 600, 800].forEach((f, i) => setTimeout(() => tone(f, f * 1.2, 0.1, 'square', 0.05), i * 90)); },
@@ -298,18 +441,20 @@ try { best = +localStorage.getItem('sk_best_combo') || 0; } catch (e) {}
 
 function say(s, f) { bubble = s; bubbleT = f || 70; }
 const pick = arr => arr[(Math.random() * arr.length) | 0];
+const bloodOn = () => cfg.blood && !!CH.blood;
 
 // ---------- Eşya çubuğu (ikonlar sprite'lardan üretilir) ----------
-function iconURL(id) {
-  const s = SPR[id], k = 4, n = s.rows.length;
-  const c = document.createElement('canvas'); c.width = 12 * k; c.height = 12 * k;
+function spriteURL(rows, map, k, pad) {
+  const n = rows.length, w = rows[0].length;
+  const c = document.createElement('canvas'); c.width = (pad || w) * k; c.height = (pad || n) * k;
   const x = c.getContext('2d');
-  const o = Math.floor((12 - n) / 2) * k;
-  for (let j = 0; j < n; j++) for (let i = 0; i < s.rows[j].length; i++) {
-    const col = s.map[s.rows[j][i]]; if (col) { x.fillStyle = col; x.fillRect(o + i * k, o + j * k, k, k); }
+  const ox = Math.floor(((pad || w) - w) / 2) * k, oy = Math.floor(((pad || n) - n) / 2) * k;
+  for (let j = 0; j < n; j++) for (let i = 0; i < rows[j].length; i++) {
+    const col = map[rows[j][i]]; if (col) { x.fillStyle = col; x.fillRect(ox + i * k, oy + j * k, k, k); }
   }
   return c.toDataURL();
 }
+const iconURL = id => spriteURL(SPR[id].rows, SPR[id].map, 4, 12);
 ITEMS.forEach((it, i) => {
   const b = document.createElement('button');
   const img = document.createElement('img'); img.src = iconURL(it.id); img.alt = '';
@@ -329,7 +474,49 @@ function select(i) {
   tone(400, 600, 0.05, 'square', 0.03);
 }
 select(0);
+{
+  const b = document.createElement('button'); b.className = 'gear'; b.id = 'openSettings';
+  b.innerHTML = '<span class="ico">⚙</span><span>AYARLAR</span>';
+  b.addEventListener('pointerup', e => { e.preventDefault(); audio(); openSettings(); });
+  bar.appendChild(b);
+}
 document.getElementById('revive').addEventListener('click', () => { audio(); revive(); });
+
+// ---------- Ayarlar paneli ----------
+const charsEl = document.getElementById('chars');
+Object.keys(CHARS).forEach(id => {
+  const ch = CHARS[id];
+  const b = document.createElement('button'); b.id = 'char-' + id;
+  const img = document.createElement('img'); img.src = spriteURL(ch.rows, ch.map, 2); img.alt = '';
+  const lb = document.createElement('span'); lb.textContent = ch.name;
+  b.appendChild(img); b.appendChild(lb);
+  b.addEventListener('click', () => { setChar(id); tone(500, 700, 0.05, 'square', 0.03); });
+  charsEl.appendChild(b);
+});
+const togBlood = document.getElementById('togBlood'), togSound = document.getElementById('togSound'), bloodNote = document.getElementById('bloodNote');
+function refreshSettings() {
+  [...charsEl.children].forEach(b => b.classList.toggle('sel', b.id === 'char-' + cfg.char));
+  const can = !!CH.blood;
+  togBlood.disabled = !can;
+  togBlood.textContent = can && cfg.blood ? 'AÇIK' : 'KAPALI';
+  togBlood.classList.toggle('on', can && cfg.blood);
+  bloodNote.textContent = can ? (CH.blood.oil ? 'Robotta yağ ve kıvılcım' : 'Uzaylıda mor kan') : 'Bu karakterde her zaman kapalı';
+  togSound.textContent = cfg.sound ? 'AÇIK' : 'KAPALI';
+  togSound.classList.toggle('on', cfg.sound);
+}
+function setChar(id) {
+  if (!CHARS[id]) return;
+  cfg.char = id; CH = CHARS[id]; saveCfg();
+  hp = 100; head.ko = false; head.face = 'happy'; head.faceT = 0; head.bandT = 0; head.markT = 0; head.a = 0; head.va = 0;
+  splats.length = 0; bruises.length = 0; combo = 0; koEl.hidden = true;
+  say(CH.hello, 90);
+  refreshSettings();
+}
+togBlood.addEventListener('click', () => { if (togBlood.disabled) return; cfg.blood = !cfg.blood; saveCfg(); refreshSettings(); tone(400, cfg.blood ? 700 : 250, 0.06, 'square', 0.03); });
+togSound.addEventListener('click', () => { cfg.sound = !cfg.sound; saveCfg(); refreshSettings(); if (cfg.sound) tone(500, 800, 0.08, 'square', 0.04); });
+document.getElementById('closeSettings').addEventListener('click', () => { setEl.hidden = true; tone(600, 400, 0.05, 'square', 0.03); });
+function openSettings() { refreshSettings(); setEl.hidden = false; }
+setEl.addEventListener('pointerdown', e => { if (e.target === setEl) setEl.hidden = true; });
 
 // ---------- Giriş ----------
 function toWorld(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / S, y: (e.clientY - r.top) / S }; }
@@ -341,10 +528,12 @@ cv.addEventListener('pointerdown', e => {
 cv.addEventListener('pointermove', e => { const p = toWorld(e); ptr.x = p.x; ptr.y = p.y; });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('keydown', e => {
+  if (!setEl.hidden) { if (e.key === 'Escape') setEl.hidden = true; return; }
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= 9) select(n - 1);
   if (e.key === ' ') strike(HX + (Math.random() < 0.5 ? -1 : 1) * K * 5, HT + 16 * K);
   if (e.key === 'r' && head.ko) revive();
+  if (e.key === 'Escape' || e.key === 'o') openSettings();
 });
 
 // ---------- Vuruş ----------
@@ -367,6 +556,20 @@ function onHead(x, y) {
   return dx * dx + dy * dy <= 1;
 }
 function toLocal(x, y) { const c = headCenter(); return { lx: (x - c.x) / K + HCX, ly: (y - c.y) / K + 16 }; }
+function gore(x, y, dir, amount) {
+  if (!bloodOn()) return;
+  const b = CH.blood;
+  const n = Math.round(6 + amount * 8);
+  for (let i = 0; i < n; i++) parts.push({ kind: 'blood', x: x, y: y, vx: -dir * (0.5 + Math.random() * 2.2) * amount + (Math.random() - 0.5), vy: -Math.random() * 2.2 * amount - 0.3, life: 50 + Math.random() * 40, c: Math.random() < 0.7 ? b.a : b.b, s: Math.random() < 0.3 ? 2 : 1 });
+  const l = toLocal(x, y);
+  splats.push({ kind: 'blood', lx: l.lx + (Math.random() - 0.5) * 2, ly: l.ly + (Math.random() - 0.5) * 2, life: 320, r: 0.8 + amount * 0.6 });
+  if (splats.length > 8) splats.shift();
+  if (b.oil) {
+    for (let i = 0; i < 5; i++) parts.push({ kind: 'spark', x, y, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.8) * 3, life: 16 });
+    if (amount >= 1.2 && Math.random() < 0.7) parts.push({ kind: 'bolt', x, y, vx: -dir * (1 + Math.random() * 2), vy: -2 - Math.random() * 1.5, life: 70, rot: 0 });
+    SFX.clank();
+  } else SFX.squirt();
+}
 function impact(s) {
   const it = s.it;
   if (!onHead(s.x, s.y)) {
@@ -391,8 +594,9 @@ function impact(s) {
   if (it.splat) {
     const l = toLocal(s.x, s.y);
     splats.push({ kind: it.splat, lx: l.lx, ly: l.ly, life: 240 });
-    if (splats.length > 6) splats.shift();
+    if (splats.length > 8) splats.shift();
   }
+  if (!it.soft && p >= 0.9) gore(s.x, s.y, s.dir, p);
   if (head.ko) { // baygınken sadece sallanır
     fx.push({ s: 'BAYGIN', x: s.x, y: s.y + 6, vy: -0.3, life: 30, c: C.hudDim, k: 1 });
     return;
@@ -409,23 +613,26 @@ function impact(s) {
     const l = toLocal(s.x, s.y);
     if (p >= 0.9) { bruises.push({ lx: l.lx + (Math.random() - 0.5) * 3, ly: Math.max(11, Math.min(27, l.ly + (Math.random() - 0.5) * 3)), r: 1 + p * 0.7, life: 900, max: 900 }); if (bruises.length > 10) bruises.shift(); }
   }
-  if (hp <= 0) { knockOut(s.dir); return; }
-  if (recent >= 12 && angryT === 0) { angryT = 200; head.face = 'angry'; head.faceT = 200; say('Yeter artık ya!', 90); tone(200, 120, 0.3, 'sawtooth', 0.06); }
-  else if (hp < 30 && Math.random() < 0.5) say(pick(['Dayanamıyorum...', 'Gözüm kararıyor', 'Biraz ara ver...']), 55);
-  else if (Math.random() < 0.5 || combo === 1) say(pick(it.lines), 55);
+  if (hp <= 0) { knockOut(s.dir, s.x, s.y); return; }
+  const lines = CH.lines && Math.random() < 0.5 ? CH.lines : it.lines;
+  if (recent >= 12 && angryT === 0) { angryT = 200; head.face = 'angry'; head.faceT = 200; say(CH.angry, 90); tone(200, 120, 0.3, 'sawtooth', 0.06); }
+  else if (hp < 30 && Math.random() < 0.5) say(pick(CH.low), 55);
+  else if (Math.random() < 0.5 || combo === 1) say(pick(lines), 55);
 }
-function knockOut(dir) {
+function knockOut(dir, x, y) {
   head.ko = true; head.koSide = dir; head.face = 'ko'; head.faceT = 0; koCount++;
   combo = 0; comboT = 0; angryT = 0; recent = 0;
-  say(pick(KO_LINES), 150); SFX.ko();
+  say(pick(CH.ko), 150); SFX.ko();
   fx.push({ s: 'K.O.', x: HX, y: HT - 4, vy: -0.3, life: 60, c: C.gold, k: 3 });
+  gore(x, y, dir, 2.2);
   koEl.hidden = false;
 }
 function revive() {
   if (!head.ko) return;
   head.ko = false; hp = 100; head.face = 'grin'; head.faceT = 90; head.bandT = 900;
   bruises.forEach(b => { b.life = Math.min(b.life, 240); });
-  head.va += 0.05; say(pick(REVIVE_LINES), 90); SFX.revive();
+  splats.forEach(sp => { if (sp.kind === 'blood') sp.life = Math.min(sp.life, 120); });
+  head.va += 0.05; say(pick(CH.revive), 90); SFX.revive();
   koEl.hidden = true;
   for (let i = 0; i < 6; i++) parts.push({ kind: 'star', ang: i * Math.PI / 3, r: K * 14, life: 40, spin: 0.15 });
 }
@@ -459,7 +666,7 @@ const FONT = {
   8:'111|101|111|101|111', 9:'111|101|111|001|111',
   '!':'010|010|010|000|010', '+':'000|010|111|010|000', '.':'000|000|000|000|010', ':':'000|010|000|010|000',
   '-':'000|000|111|000|000', '?':'111|001|011|000|010', "'":'010|010|000|000|000', ',':'000|000|000|010|100',
-  ' ':'000|000|000|000|000',
+  '%':'101|001|010|100|101', ' ':'000|000|000|000|000',
 };
 const TR = { 'İ':'I','Ş':'S','Ğ':'G','Ü':'U','Ö':'O','Ç':'C' };
 function norm(s) { return String(s).toLocaleUpperCase('tr').replace(/[İŞĞÜÖÇ]/g, ch => TR[ch]); }
@@ -508,6 +715,32 @@ function drawScene() {
 function drawBody() {
   const chin = HT + HH * K - K;
   const y0 = chin + 4 * K;
+  if (cfg.char === 'alien') {
+    px(HX - 20 * K, y0 - 1, 40 * K, H, C.out);
+    px(HX - 19 * K, y0, 38 * K, H, C.alSuit);
+    px(HX - 19 * K, y0, 38 * K, K, C.alSuitL);
+    px(HX - 19 * K, y0, K, H, C.alSuitD); px(HX + 18 * K, y0, K, H, C.alSuitD);
+    px(HX - 8 * K, y0 - 2.5 * K, 16 * K, 3.5 * K, C.out); px(HX - 7.5 * K, y0 - 2 * K, 15 * K, 2.5 * K, C.alSuitD); px(HX - 7.5 * K, y0 - 2 * K, 15 * K, 0.8 * K, C.alSuitL);
+    px(HX - 5 * K, y0 + 3 * K, 10 * K, 6 * K, C.out); px(HX - 4.5 * K, y0 + 3.5 * K, 9 * K, 5 * K, C.alSuitD);
+    px(HX - 3.5 * K, y0 + 4.5 * K, 1.5 * K, 1.5 * K, (t >> 4) & 1 ? C.alBall : C.alD); px(HX - 0.75 * K, y0 + 4.5 * K, 1.5 * K, 1.5 * K, (t >> 4) & 1 ? C.alD : C.alGlow); px(HX + 2 * K, y0 + 4.5 * K, 1.5 * K, 1.5 * K, C.gold);
+    px(HX - 3.5 * K, y0 + 6.8 * K, 7 * K, 0.8 * K, C.alSuitL);
+    px(HX - 2.5 * K, chin - 2 * K, 5 * K, 7 * K, C.out); px(HX - 2 * K, chin - 2 * K, 4 * K, 6.5 * K, C.al); px(HX - 2 * K, chin - 2 * K, 4 * K, 1.5 * K, C.alD);
+    return;
+  }
+  if (cfg.char === 'robot') {
+    px(HX - 20 * K, y0 - 1, 40 * K, H, C.out);
+    px(HX - 19 * K, y0, 38 * K, H, C.mt);
+    px(HX - 19 * K, y0, 38 * K, K, C.mtL);
+    px(HX - 19 * K, y0, K, H, C.mtD); px(HX + 18 * K, y0, K, H, C.mtD);
+    px(HX - 14 * K, y0 + 2 * K, 1, H, C.mtD); px(HX + 14 * K, y0 + 2 * K, 1, H, C.mtD);
+    px(HX - 7 * K, y0 + 2 * K, 14 * K, 8 * K, C.out); px(HX - 6.5 * K, y0 + 2.5 * K, 13 * K, 7 * K, C.mtD);
+    px(HX - 5.5 * K, y0 + 3.5 * K, 5 * K, 2 * K, C.screen); px(HX - 5 * K, y0 + 4 * K, Math.max(0.5, 4 * K * hp / 100), 1 * K, hp > 50 ? C.cyan : C.rlight);
+    px(HX + 1 * K, y0 + 3.5 * K, 1.5 * K, 1.5 * K, (t >> 3) & 1 ? C.rlight : C.mtD); px(HX + 3.5 * K, y0 + 3.5 * K, 1.5 * K, 1.5 * K, (t >> 3) & 1 ? C.mtD : C.cyan);
+    px(HX - 5.5 * K, y0 + 6.5 * K, 11 * K, 0.8 * K, C.mt); px(HX - 5.5 * K, y0 + 8 * K, 11 * K, 0.8 * K, C.mt);
+    px(HX - 3 * K, chin - 2 * K, 6 * K, 7 * K, C.out); px(HX - 2.5 * K, chin - 2 * K, 5 * K, 6.5 * K, C.mtD);
+    px(HX - 1 * K, chin - 2 * K, 2 * K, 6.5 * K, C.mtL); px(HX - 2.5 * K, chin + 0.5 * K, 5 * K, 0.8 * K, C.out);
+    return;
+  }
   px(HX - 20 * K, y0 - 1, 40 * K, H, C.out);
   px(HX - 19 * K, y0, 38 * K, H, C.red);
   px(HX - 19 * K, y0, 38 * K, K, C.redL);
@@ -532,17 +765,31 @@ function drawHead() {
   if (hc.width !== HW * K) { hc.width = HW * K; hc.height = HH * K; }
   hg.clearRect(0, 0, hc.width, hc.height);
   cg = hg;
-  grid(HEAD, HEAD_MAP, 0, 0, K);
+  grid(CH.rows, CH.map, 0, 0, K);
   drawDamage();
-  drawFace();
+  if (cfg.char === 'alien') drawFaceAlien(); else if (cfg.char === 'robot') drawFaceRobot(); else drawFaceStudent();
   for (const sp of splats) {
-    const x = sp.lx * K, y = sp.ly * K, cfg = SPLAT[sp.kind];
+    const x = sp.lx * K, y = sp.ly * K;
+    if (sp.kind === 'blood') {
+      const b = CH.blood || { a: '#c04dff', b: '#6a1fa8' };
+      hg.globalAlpha = Math.min(1, sp.life / 60);
+      const r = sp.r;
+      f(sp.lx - r * 1.5, sp.ly - r * 0.8, r * 3, r * 1.6, b.a); f(sp.lx - r * 0.8, sp.ly - r * 1.5, r * 1.6, r * 3, b.a);
+      f(sp.lx - r * 0.5, sp.ly - r * 0.5, r, r, b.b);
+      f(sp.lx + r * 1.6, sp.ly + r * 0.9, 0.8, 0.8, b.a); f(sp.lx - r * 2, sp.ly + 0.3, 0.8, 0.8, b.a);
+      const drip = Math.min(9, (320 - sp.life) / 12);
+      f(sp.lx - 0.4, sp.ly + r * 1.2, 0.8, drip, b.a); f(sp.lx - 0.4, sp.ly + r * 1.2 + drip - 0.6, 1, 1, b.b);
+      f(sp.lx + r * 0.9, sp.ly + r, 0.6, Math.min(5, drip * 0.6), b.a);
+      hg.globalAlpha = 1;
+      continue;
+    }
+    const cfgS = SPLAT[sp.kind];
     hg.globalAlpha = Math.min(1, sp.life / 40);
-    px(x - 3 * K, y - 1.5 * K, 6 * K, 3 * K, cfg.a); px(x - 2 * K, y - 3 * K, 4 * K, 6 * K, cfg.a);
-    px(x - 1.5 * K, y - 1.5 * K, 3 * K, 2 * K, cfg.b); px(x + 2.5 * K, y + 2 * K, K, K, cfg.a); px(x - 3.5 * K, y + 0.5 * K, K, K, cfg.a);
-    if (cfg.drip) {
-      px(x - 0.5 * K, y + 3.5 * K + Math.min(5, (240 - sp.life) / 20) * K, K, 2 * K, cfg.a);
-      px(x + 1 * K, y + 3 * K + Math.min(3, (240 - sp.life) / 40) * K, 0.6 * K, 1.5 * K, cfg.a);
+    px(x - 3 * K, y - 1.5 * K, 6 * K, 3 * K, cfgS.a); px(x - 2 * K, y - 3 * K, 4 * K, 6 * K, cfgS.a);
+    px(x - 1.5 * K, y - 1.5 * K, 3 * K, 2 * K, cfgS.b); px(x + 2.5 * K, y + 2 * K, K, K, cfgS.a); px(x - 3.5 * K, y + 0.5 * K, K, K, cfgS.a);
+    if (cfgS.drip) {
+      px(x - 0.5 * K, y + 3.5 * K + Math.min(5, (240 - sp.life) / 20) * K, K, 2 * K, cfgS.a);
+      px(x + 1 * K, y + 3 * K + Math.min(3, (240 - sp.life) / 40) * K, 0.6 * K, 1.5 * K, cfgS.a);
     }
     hg.globalAlpha = 1;
   }
@@ -559,21 +806,26 @@ function drawHead() {
 // yüz: sprite-piksel koordinatı (26x32), kafa sol-üst köşesi 0,0
 function f(i, j, w, h, c) { px(i * K, j * K, w * K, h * K, c); }
 function drawDamage() {
-  // morluklar: taze mor -> mavi -> sararmış, zamanla solar
+  const [b1, b2, b3] = CH.bruise;
   for (const b of bruises) {
     const age = 1 - b.life / b.max;
-    const col = age < 0.35 ? C.bruise : age < 0.7 ? C.bruise2 : C.bruiseOld;
+    const col = age < 0.35 ? b1 : age < 0.7 ? b2 : b3;
     hg.globalAlpha = 0.45 * Math.min(1, b.life / 120);
     const r = b.r;
     f(b.lx - r, b.ly - r * 0.6, r * 2, r * 1.2, col);
     f(b.lx - r * 0.6, b.ly - r, r * 1.2, r * 2, col);
     hg.globalAlpha = 0.35 * Math.min(1, b.life / 120);
-    f(b.lx - r * 0.4, b.ly - r * 0.4, r * 0.8, r * 0.8, C.swell);
+    f(b.lx - r * 0.4, b.ly - r * 0.4, r * 0.8, r * 0.8, CH.swell);
   }
   hg.globalAlpha = 1;
-  // can azaldıkça şişlik ve morarmış göz
-  if (hp < 60) { hg.globalAlpha = 0.45; f(14.5, 14.5, 5, 4, C.bruise); hg.globalAlpha = 1; }
-  if (hp < 40) { f(3.5, 19, 2.5, 3.5, C.swell); f(20, 19, 2.5, 3.5, C.swell); }
+  if (cfg.char === 'robot') {
+    if (hp < 60) { f(6, 8, 3, 0.8, C.mtD); f(8, 8.8, 2, 0.8, C.mtD); f(17, 23, 4, 0.8, C.mtD); }
+    if (hp < 40) { f(3, 26, 2, 2, C.mtD); f(21, 12, 2, 3, C.mtD); }
+    if (head.bandT > 0) { f(5, 22, 4, 1.4, C.bolt); f(5.6, 21.5, 0.8, 2.4, C.bolt); f(7.6, 21.5, 0.8, 2.4, C.bolt); }
+    return;
+  }
+  if (hp < 60) { hg.globalAlpha = 0.45; f(cfg.char === 'alien' ? 15 : 14.5, cfg.char === 'alien' ? 11 : 14.5, 6, 5, b1); hg.globalAlpha = 1; }
+  if (hp < 40) { f(3.5, 19, 2.5, 3.5, CH.swell); f(20, 19, 2.5, 3.5, CH.swell); }
   // bandaj (ayıldıktan sonra)
   if (head.bandT > 0) { f(5, 19.5, 5, 2, C.out); f(5.4, 19.9, 4.2, 1.2, C.bandage); f(6.5, 20.2, 2, 0.6, C.bandageD); }
 }
@@ -587,8 +839,8 @@ function eyeSmile(x, y) {
   f(x, y + 1, 1, 1, C.eye); f(x + 1, y, 2, 1, C.eye); f(x + 3, y + 1, 1, 1, C.eye);
   f(x + 0.5, y + 2, 3, 0.5, C.skinD);
 }
-function eyeX(x, y) { f(x, y, 1, 1, C.eye); f(x + 1, y + 1, 1, 1, C.eye); f(x + 2, y + 2, 1, 1, C.eye); f(x + 2, y, 1, 1, C.eye); f(x, y + 2, 1, 1, C.eye); }
-function drawFace() {
+function eyeX(x, y, c) { c = c || C.eye; f(x, y, 1, 1, c); f(x + 1, y + 1, 1, 1, c); f(x + 2, y + 2, 1, 1, c); f(x + 2, y, 1, 1, c); f(x, y + 2, 1, 1, c); }
+function drawFaceStudent() {
   const hd = head, face = hd.face;
   const ex = hd.eyeX, ey = hd.eyeY;
   const blink = hd.blink > 0 && face === 'happy';
@@ -638,6 +890,68 @@ function drawFace() {
   else if (face === 'grumpy' || face === 'angry') { f(8, 26.5, 1, 1, C.mouth); f(17, 26.5, 1, 1, C.mouth); f(9, 25.5, 8, 1, C.mouth); }
   else if (face === 'sleepy') { f(12, 25.5, 2, 1.5, C.mouth); }
   else if (face === 'cold') { const w = (t >> 2) & 1; f(9, 25.5 + w * 0.5, 2, 1, C.lipCold); f(11, 26 - w * 0.5, 2, 1, C.lipCold); f(13, 25.5 + w * 0.5, 2, 1, C.lipCold); f(15, 26 - w * 0.5, 2, 1, C.lipCold); f(4, 5, 1, 1, C.snow); f(15, 3, 1, 1, C.snow); f(10, 2, 1, 1, C.snow); f(21, 8, 1, 1, C.snow); }
+}
+
+function drawFaceAlien() {
+  const hd = head, face = hd.face, ex = hd.eyeX, ey = hd.eyeY;
+  const blink = hd.blink > 0 && face === 'happy';
+  const eye = (x, y, mode) => {
+    if (mode === 'closed') { f(x + 0.5, y + 3, 6, 1, C.alEye); return; }
+    if (mode === 'x') { eyeX(x + 2, y + 1.5, C.alEye); return; }
+    if (mode === 'squint') { f(x + 1, y + 2, 5, 2, C.alEye); f(x + 2, y + 1, 3, 1, C.alEye); f(x + 2, y + 4, 3, 1, C.alEye); return; }
+    f(x + 1, y, 5, 7, C.alEye); f(x, y + 1, 7, 5, C.alEye);
+    if (mode === 'dizzy') { const sp = (t >> 2) & 1; f(x + 2 + (sp ? 1 : 0), y + 2 + (sp ? 0 : 1), 2, 2, C.alGlow); f(x + 4 - (sp ? 1 : 0), y + 4 - (sp ? 0 : 1), 1, 1, C.alGlow); return; }
+    if (mode === 'angry') { f(x, y, 7, 2, C.al); }
+    f(x + 1.5 + ex, y + 1.5 + ey, 2, 1.5, C.alGlow); f(x + 4 + ex * 0.5, y + 4 + ey * 0.5, 1, 1, C.alGlow);
+  };
+  let mode = 'open';
+  if (blink || face === 'sleepy') mode = 'closed';
+  else if (face === 'ko') mode = 'x';
+  else if (face === 'ouch' || face === 'laugh') mode = 'squint';
+  else if (face === 'dizzy') mode = 'dizzy';
+  else if (face === 'angry' || face === 'grumpy') mode = 'angry';
+  eye(4, 11, mode); eye(15, 11, mode);
+  f(11.5, 20, 0.8, 0.8, C.alD); f(13.7, 20, 0.8, 0.8, C.alD);
+  if (hd.markT > 0) { const mx = hd.side < 0 ? 3 : 16; f(mx, 19, 1.2, 4, '#d9d95a'); f(mx + 1.8, 18.5, 1.2, 5, '#d9d95a'); f(mx + 3.6, 19, 1.2, 4, '#d9d95a'); }
+  if (face === 'happy') { f(10, 23.5, 1, 1, C.alD); f(15, 23.5, 1, 1, C.alD); f(11, 24.5, 4, 1, C.alD); }
+  else if (face === 'grin' || face === 'laugh') { f(9.5, 23, 1, 1, C.alD); f(15.5, 23, 1, 1, C.alD); f(10.5, 24, 5, 2.2, C.alEye); f(11, 24, 4, 0.8, C.teeth); }
+  else if (face === 'ouch' || face === 'dizzy') { f(11, 23.5, 4, 3.5, C.alEye); f(12, 26, 2, 1, C.alBall); }
+  else if (face === 'ko') { f(10, 24, 6, 1, C.alD); f(12.5, 24.5, 2.5, 3, C.alEye); f(13, 24.8, 1.8, 2.4, C.alBall); }
+  else if (face === 'grumpy' || face === 'angry') { f(10, 25.5, 1, 1, C.alD); f(15, 25.5, 1, 1, C.alD); f(11, 24.5, 4, 1, C.alD); }
+  else if (face === 'sleepy') { f(12.5, 24.5, 1.5, 1.2, C.alD); }
+  else if (face === 'cold') { const w = (t >> 2) & 1; f(10, 24.5 + w * 0.5, 2, 1, C.lipCold); f(12, 25 - w * 0.5, 2, 1, C.lipCold); f(14, 24.5 + w * 0.5, 2, 1, C.lipCold); f(5, 7, 1, 1, C.snow); f(19, 8, 1, 1, C.snow); }
+  if (face !== 'ko') { const gl = (t >> 3) & 1; f(5 + (gl ? 0 : 1), 1, 1, 1, C.alGlow); f(19 + (gl ? 1 : 0), 1, 1, 1, C.alGlow); }
+}
+
+function drawFaceRobot() {
+  const hd = head, face = hd.face, ex = hd.eyeX;
+  const blink = hd.blink > 0 && face === 'happy';
+  const cy = C.cyan, cd = C.cyanD;
+  f(5, 11 + ((t >> 1) % 10), 15, 0.5, 'rgba(95,242,255,0.12)');
+  const eye = (x, y, mode) => {
+    if (mode === 'closed') { f(x, y + 1.5, 4, 0.8, cy); return; }
+    if (mode === 'x') { eyeX(x + 0.5, y - 0.5, C.rlight); return; }
+    if (mode === 'squint') { f(x, y + 0.5, 4, 2, cy); f(x + 1, y + 1, 2, 1, C.screen); return; }
+    if (mode === 'dizzy') { const sp = (t >> 2) & 3; f(x + (sp & 1) * 2, y + (sp >> 1) * 2, 2, 2, cy); f(x + 1, y + 1, 2, 2, cd); return; }
+    if (mode === 'angry') { f(x, y, 4, 3, cy); f(x + (x < 12 ? 0 : 2), y, 2, 1.2, C.screen); f(x + 1 + ex * 0.5, y + 1, 2, 1.5, C.rlight); return; }
+    f(x, y, 4, 3, cy); f(x + 1 + ex * 0.5, y + 0.8, 2, 1.5, C.screen); f(x + 1 + ex * 0.5, y + 0.8, 1, 0.7, cd);
+  };
+  let mode = 'open';
+  if (blink || face === 'sleepy') mode = 'closed';
+  else if (face === 'ko') mode = 'x';
+  else if (face === 'ouch' || face === 'laugh') mode = 'squint';
+  else if (face === 'dizzy') mode = 'dizzy';
+  else if (face === 'angry' || face === 'grumpy') mode = 'angry';
+  eye(6, 13, mode); eye(15, 13, mode);
+  if (face === 'happy') { f(8, 17.5, 1, 1, cy); f(16, 17.5, 1, 1, cy); f(9, 18.5, 7, 1, cy); }
+  else if (face === 'grin' || face === 'laugh') { f(8, 17, 1, 1, cy); f(16, 17, 1, 1, cy); f(9, 18, 7, 1.5, cy); f(10, 18.5, 1, 0.5, C.screen); f(12, 18.5, 1, 0.5, C.screen); f(14, 18.5, 1, 0.5, C.screen); }
+  else if (face === 'ouch' || face === 'dizzy') { f(10, 17.5, 5, 2.5, cy); f(11, 18, 3, 1.5, C.screen); }
+  else if (face === 'ko') { f(9, 18.5, 7, 1, C.rlight); }
+  else if (face === 'grumpy' || face === 'angry') { f(8, 19.5, 1, 1, cy); f(16, 19.5, 1, 1, cy); f(9, 18.5, 7, 1, cy); }
+  else if (face === 'sleepy') { f(11.5, 18.5, 2, 1, cy); }
+  else if (face === 'cold') { const w = (t >> 2) & 1; for (let i = 0; i < 4; i++) f(9 + i * 2, 18.5 + ((i + w) & 1) * 0.5, 1.5, 1, cy); }
+  f(12, 1, 2, 2, (t >> 4) & 1 || face === 'ko' ? C.rlight : '#ff9b9b');
+  if (hd.markT > 0) { const mx = hd.side < 0 ? 4 : 18; f(mx, 22, 3, 0.8, C.mtD); f(mx + 1, 23, 2, 0.8, C.mtD); }
 }
 
 // ---------- Eşyalar, kol ve el ----------
@@ -716,6 +1030,8 @@ function drawParts() {
     else if (p.kind === 'drop') px(p.x, p.y, 1, 2, C.water);
     else if (p.kind === 'chalk') px(p.x, p.y, 1, 1, '#f3f0e8');
     else if (p.kind === 'spark') px(p.x, p.y, 1, 1, C.gold);
+    else if (p.kind === 'blood') px(p.x, p.y, p.s, p.s, p.c);
+    else if (p.kind === 'bolt') { g.save(); g.translate(p.x, p.y); g.rotate(p.rot); px(-1.5, -1.5, 3, 3, C.bolt); px(-0.5, -0.5, 1, 1, C.mtD); g.restore(); }
     else if (p.kind === 'heart') { px(p.x, p.y, 1, 1, C.heart); px(p.x + 2, p.y, 1, 1, C.heart); px(p.x, p.y + 1, 3, 1, C.heart); px(p.x + 1, p.y + 2, 1, 1, C.heart); }
     else if (p.kind === 'z') text('Z', p.x, p.y, C.zz, 1, 'left', true);
   }
@@ -763,6 +1079,7 @@ function drawHUD() {
   text('REKOR', lx + 7, y0 + 36, C.hudDim, 1, 'left', true);
   text(s3, vx, y0 + 36, C.gold, 1, 'right', true);
   if (koCount > 0) text('KO ' + koCount, W - 3, H - 8, C.hudDim, 1, 'right', true);
+  text(CH.name, W - 3, H - (koCount > 0 ? 15 : 8), C.hudDim, 1, 'right', true);
   if (thumbT > 0) {
     const u = Math.min(1, thumbT > 100 ? (120 - thumbT) / 20 : thumbT < 20 ? thumbT / 20 : 1);
     const yb = HT + HH * K + 10 * K - u * 9 * K, k = Math.max(2, K);
@@ -782,6 +1099,7 @@ function update() {
     hd.oy = 2 * K;
     if (t % 25 === 0) parts.push({ kind: 'star', ang: Math.random() * 6.28, r: K * 14, life: 60, spin: 0.06 });
     if (t % 40 === 0) parts.push({ kind: 'z', x: HX + hd.ox + 12 * K, y: HT - 2 * K, vx: 0.2, vy: -0.4, life: 40 });
+    if (bloodOn() && t % 18 === 0) { const c = headCenter(); parts.push({ kind: 'blood', x: c.x - hd.koSide * 8 * K + (Math.random() - 0.5) * 6, y: c.y + 8 * K, vx: 0, vy: 0.3, life: 60, c: CH.blood.a, s: 1 }); }
   } else {
     hd.va += -0.05 * hd.a; hd.va *= 0.9; hd.a += hd.va; hd.a = Math.max(-0.8, Math.min(0.8, hd.a));
     hd.oy = 0;
@@ -815,7 +1133,13 @@ function update() {
   for (let i = parts.length - 1; i >= 0; i--) {
     const p = parts[i]; p.life--;
     if (p.kind === 'star') p.ang += p.spin;
-    else { p.x += p.vx; p.y += p.vy; if (p.kind === 'feather' || p.kind === 'chalk') { p.vy += 0.01; p.vx += Math.sin(t * 0.2 + i) * 0.03; } else if (p.kind === 'snow' || p.kind === 'spark' || p.kind === 'drop') p.vy += 0.08; }
+    else {
+      p.x += p.vx; p.y += p.vy;
+      if (p.kind === 'feather' || p.kind === 'chalk') { p.vy += 0.01; p.vx += Math.sin(t * 0.2 + i) * 0.03; }
+      else if (p.kind === 'snow' || p.kind === 'spark' || p.kind === 'drop') p.vy += 0.08;
+      else if (p.kind === 'blood') { p.vy += 0.12; p.vx *= 0.98; if (p.y > H + 4) p.life = 0; }
+      else if (p.kind === 'bolt') { p.vy += 0.15; p.rot += 0.3; if (p.y > H + 4) p.life = 0; }
+    }
     if (p.life <= 0) parts.splice(i, 1);
   }
   for (let i = splats.length - 1; i >= 0; i--) { splats[i].life--; if (splats[i].life <= 0) splats.splice(i, 1); }
@@ -846,7 +1170,8 @@ window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 100));
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(resize);
 resize();
-say('Selam! Vurma ama...', 120);
+refreshSettings();
+say(CH.hello, 120);
 setTimeout(() => tipEl.classList.add('hide'), 8000);
 requestAnimationFrame(loop);
 })();

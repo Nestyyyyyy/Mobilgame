@@ -43,10 +43,14 @@ Ya da repoyu GitHub Pages ile yayınlayıp linki telefonda açabilirsin.
 - Her şey `index.html` içinde: sahne, kafa, eşyalar, fizik, ses, dokunmatik kontroller.
 - Oyun düşük çözünürlüklü bir off-screen canvas'a çizilir, sonra tam sayı katsayıyla
   büyütülür (nearest-neighbor) → gerçek piksel görünümü.
-- Kafa 14×14 piksellik bir sprite (`HEAD`), önce kendi tuvaline çizilir, sonra boyun
-  noktasından yay fiziğiyle (`head.a`, `head.ox`, `head.sq`) döndürülüp ezilir.
+- Kafa 24×26 piksellik bir sprite (`HEAD`; kulaklar, saç tutamları, gölgeler), önce kendi
+  tuvaline çizilir, sonra boyun noktasından yay fiziğiyle (`head.a`, `head.ox`, `head.sq`)
+  döndürülüp ezilir.
+- Vuruşlar birinci şahıs: ekranın alt köşesinden kazak kollu bir kol uzanır, yumruk eşyayı
+  tutar (`drawArm`, `drawHeld`), fırlatılan eşyalar önce elde görünüp sonra uçar.
+- Eşya çubuğundaki ikonlar emoji değil, aynı sprite'lardan `canvas.toDataURL()` ile üretilir.
 - Yüz ifadeleri `drawFace()` içinde durum bazlı çizilir: `happy, ouch, dizzy, grumpy,
   sleepy, laugh, cold, angry, grin`.
-- Yeni eşya eklemek için `SPR` içine 8×8 bir sprite ve `ITEMS` listesine bir satır eklemek
+- Yeni eşya eklemek için `SPR` içine 12×12 (fırlatılanlar 8×8) bir sprite ve `ITEMS` listesine bir satır eklemek
   yeterli (`kind: 'swing'` elle vurulan, `kind: 'throw'` fırlatılan).
 - Sesler WebAudio ile anlık üretilir, ses dosyası yok.

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1013">
+<title>Sınıfın Kralı</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #1a1013; overflow: hidden; touch-action: none;
+    font-family: "Courier New", monospace; user-select: none; -webkit-user-select: none;
+  }
+  #g { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  #bar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    background: #2a1b1e; border-top: 4px solid #1a1013;
+    display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
+    touch-action: pan-x; scrollbar-width: none;
+  }
+  #bar::-webkit-scrollbar { display: none; }
+  #bar button {
+    flex: 0 0 auto; width: 64px; height: 64px; border: 3px solid #1a1013; border-radius: 4px;
+    background: #f2e6c9; color: #1a1013; box-shadow: 0 4px 0 #1a1013; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font: bold 9px "Courier New", monospace; letter-spacing: .5px; touch-action: pan-x;
+  }
+  #bar button .ico { font-size: 24px; line-height: 1; }
+  #bar button.sel { background: #ffd23f; transform: translateY(3px); box-shadow: 0 1px 0 #1a1013; }
+  #bar button.peace { background: #9fd8a8; }
+  #tip {
+    position: fixed; bottom: 100px; left: 0; right: 0; text-align: center;
+    color: #f2e6c9; font-size: 12px; pointer-events: none; opacity: .95; transition: opacity 1s;
+    text-shadow: 1px 1px 0 #1a1013, -1px -1px 0 #1a1013, 1px -1px 0 #1a1013, -1px 1px 0 #1a1013;
+  }
+  #tip.hide { opacity: 0; }
+</style>
+</head>
+<body>
+<canvas id="g"></canvas>
+<div id="tip">Alttan eşya seç, kafasına dokun! 👇</div>
+<div id="bar"></div>
+<script>
+(() => {
+'use strict';
+
+// ---------- Palet ----------
+const C = {
+  out: '#1a1013',
+  skin: '#f2c9a3', skinD: '#d9a679', blush: '#e8a08a', mark: '#e4746a',
+  hair: '#2b211c', hairL: '#4a3a30',
+  eye: '#1e1611', eyeW: '#ffffff', mouth: '#7a3a34', tongue: '#d96b6b', teeth: '#ffffff', lipCold: '#7a8fc9',
+  red: '#a3182b', redD: '#6e0f1e', redL: '#c0263b', btn: '#4a0a14',
+  wallTop: '#f3f0ea', wallBand: '#b9b7b3', wallLine: '#9c9a96', win: '#dfe9f0',
+  glove: '#d8282f', gloveD: '#9c1a20', gloveW: '#fff',
+  book: '#e62e2e', bookW: '#fff2c2', bookG: '#2a7a4a',
+  slip: '#3b6fd6', slipD: '#27499a', slipL: '#7ea3ee',
+  tom: '#e33a2e', tomD: '#a8261d', tomL: '#ff8a7a', leaf: '#3f9c47',
+  pil: '#f6f2e8', pilD: '#cfc7b8', pilL: '#ffffff',
+  fea: '#f0ead6', feaD: '#b9b2a0',
+  snow: '#ffffff', snowD: '#bcd8ee',
+  hud: '#f2e6c9', gold: '#ffd23f', white: '#ffffff', star: '#ffd23f', zz: '#6f8fd8',
+};
+
+// ---------- Kafa sprite (14x14) ----------
+const HEAD = [
+  '....oooooo....',
+  '..ooHHHHHHoo..',
+  '.oHHHhHHHHHHo.',
+  '.oHHHHHHHHhHHo',
+  'oHHHSSSSSSSHHo',
+  'oHSSSSSSSSSSHo',
+  'oHSSSSSSSSSSHo',
+  'oSSSSSSSSSSSSo',
+  'oSSSSSSSSSSSSo',
+  'oSSSSSSSSSSSSo',
+  '.oSSSSSSSSSSo.',
+  '.oSSSSSSSSSSo.',
+  '..oSSSSSSSSo..',
+  '...ooSSSSoo...',
+];
+const HEAD_MAP = { o: C.out, H: C.hair, h: C.hairL, S: C.skin };
+
+// ---------- Eşya sprite'ları (8x8) ----------
+const SPR = {
+  slap: { map: { o: C.out, S: C.skin, D: C.skinD }, rows: [
+    '.o.o.o..', 'oSoSoSo.', 'oSSSSSo.', 'oSSSSSoo', 'oSSSSSSo', 'oDSSSSSo', '.oSSSSo.', '..oooo..' ] },
+  glove: { map: { o: C.out, R: C.glove, D: C.gloveD, W: C.gloveW }, rows: [
+    '..oooo..', '.oRRRRo.', 'oRRRRRRo', 'oRRRRRRo', 'oDRRRRRo', '.oDRRRo.', '.oWWWWo.', '..oooo..' ] },
+  book: { map: { o: C.out, R: C.book, W: C.bookW, G: C.bookG, D: C.redD }, rows: [
+    'ooooooo.', 'oRRRRRoW', 'oRGGGRoW', 'oRRRRRoW', 'oRWWWRoW', 'oRRRRRoW', 'oDDDDDoW', 'ooooooo.' ] },
+  slipper: { map: { o: C.out, B: C.slip, D: C.slipD, L: C.slipL }, rows: [
+    '..oooo..', '.oBBBBo.', 'oBLBBLBo', 'oBBLLBBo', 'oBBBBBBo', 'oDBBBBDo', '.oDDDDo.', '..oooo..' ] },
+  tomato: { map: { o: C.out, R: C.tom, D: C.tomD, L: C.tomL, G: C.leaf }, rows: [
+    '...oGo..', '..oGGGo.', '.oRLRRRo', 'oRLRRRRo', 'oRRRRRRo', 'oRRRRRDo', '.oRRRDo.', '..oooo..' ] },
+  pillow: { map: { o: C.out, P: C.pil, D: C.pilD, L: C.pilL }, rows: [
+    'oooooooo', 'oPLLLLPo', 'oLPPPPLo', 'oPPPPPPo', 'oPPPPPDo', 'oPDDDDDo', 'oooooooo', '........' ] },
+  feather: { map: { o: C.out, F: C.fea, D: C.feaD }, rows: [
+    '......oo', '....ooFo', '...oFFFo', '..oFFFo.', '.oFFFo..', 'oFDFo...', 'oDo.....', 'o.......' ] },
+  snow: { map: { o: C.out, W: C.snow, D: C.snowD }, rows: [
+    '..oooo..', '.oWWWWo.', 'oWWWWWWo', 'oWWWWWDo', 'oWWWWDDo', 'oDWWDDDo', '.oDDDDo.', '..oooo..' ] },
+  thumb: { map: { o: C.out, S: C.skin, D: C.skinD }, rows: [
+    '...oo...', '..oSSo..', '..oSSo..', 'ooSSSSoo', 'oSSSSSSo', 'oSSSSSSo', 'oDSSSSDo', '.oooooo.' ] },
+};
+
+const ITEMS = [
+  { id: 'slap',    name: 'TOKAT',   ico: '✋', kind: 'swing', power: 1.0, face: 'ouch',   sfx: 'slap',   words: ['ŞAK!', 'ÇAT!'], lines: ['Ay!', 'Yapma ya!', 'Elin ağırmış!', 'Hocam görüyor musun?'] },
+  { id: 'glove',   name: 'ELDİVEN', ico: '🥊', kind: 'swing', power: 1.8, face: 'dizzy',  sfx: 'thud',   words: ['POW!', 'BAM!'], lines: ['Off!', 'Yıldızları gördüm!', 'Ring mi burası?'], stars: true },
+  { id: 'book',    name: 'KİTAP',   ico: '📕', kind: 'swing', power: 1.3, face: 'ouch',   sfx: 'slap',   words: ['PAT!', 'GÜM!'], lines: ['Kitapla mı?', 'Okusana onu!', 'Sınav var ya!'] },
+  { id: 'slipper', name: 'TERLİK',  ico: '🩴', kind: 'swing', power: 1.4, face: 'ouch',   sfx: 'slap',   words: ['ŞLAP!'],        lines: ['Anne terliği!', 'Yok artık!', 'Terlik mi ya?'] },
+  { id: 'tomato',  name: 'DOMATES', ico: '🍅', kind: 'throw', power: 0.6, face: 'grumpy', sfx: 'splat',  words: ['SPLAT!'],       lines: ['Domates mi?!', 'Iyy!', 'Salata oldum!'], splat: 'tomato' },
+  { id: 'pillow',  name: 'YASTIK',  ico: '🛏️', kind: 'swing', power: 0.7, face: 'sleepy', sfx: 'puf',    words: ['PUF!'],         lines: ['Puf!', 'Uykum geldi...', 'Yumuşakmış'], feathers: true },
+  { id: 'feather', name: 'TÜY',     ico: '🪶', kind: 'swing', power: 0.1, face: 'laugh',  sfx: 'giggle', words: ['HİHİ!'],        lines: ['Hihi dur!', 'Gıdıklanıyorum!', 'Hahaha!'] },
+  { id: 'snow',    name: 'KARTOPU', ico: '⛄', kind: 'throw', power: 0.9, face: 'cold',   sfx: 'crunch', words: ['ÇAT!'],         lines: ['Brr!', 'Soğuk soğuk!', 'Kışın mı geldik?'], splat: 'snow' },
+  { id: 'peace',   name: 'BARIŞ',   ico: '🤝', kind: 'peace', lines: ['Tamam, barıştık!', 'Süper, dostuz!', 'Helal olsun!'] },
+];
+const MISS_LINES = ['Iska!', 'Tutturamadın!', 'Buradayım!'];
+
+// ---------- Canvas ----------
+const cv = document.getElementById('g');
+const sc = cv.getContext('2d');
+const off = document.createElement('canvas');
+const g = off.getContext('2d');
+const hc = document.createElement('canvas');
+const hg = hc.getContext('2d');
+let cg = g; // aktif çizim bağlamı
+const bar = document.getElementById('bar');
+let W = 0, H = 0, S = 3, K = 5, HX = 0, HY = 0; // K: kafa ölçeği, (HX,HY): kafa merkezi
+
+function resize() {
+  const dw = window.innerWidth, dh = window.innerHeight;
+  const bh = bar.getBoundingClientRect().height;
+  const ph = dh - bh;
+  document.getElementById('tip').style.bottom = (bh + 6) + 'px';
+  S = Math.max(2, Math.floor(Math.min(dw, ph) / 120));
+  W = Math.ceil(dw / S); H = Math.ceil(ph / S);
+  off.width = W; off.height = H;
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  cv.width = Math.round(W * S * dpr); cv.height = Math.round(H * S * dpr);
+  cv.style.width = (W * S) + 'px'; cv.style.height = (H * S) + 'px';
+  sc.imageSmoothingEnabled = false;
+  K = Math.max(3, Math.min(8, Math.floor(Math.min(W * 0.6, H * 0.5) / 14)));
+  HX = Math.floor(W / 2); HY = Math.floor(H * 0.52);
+}
+
+// ---------- Ses ----------
+let actx = null;
+function audio() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+  if (actx && actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone(f0, f1, dur, type, vol) {
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), gn = a.createGain();
+  o.type = type || 'square';
+  o.frequency.setValueAtTime(f0, a.currentTime);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), a.currentTime + dur);
+  gn.gain.setValueAtTime(vol || 0.08, a.currentTime);
+  gn.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur);
+  o.connect(gn); gn.connect(a.destination);
+  o.start(); o.stop(a.currentTime + dur);
+}
+function noise(dur, cutoff, vol, hp) {
+  const a = audio(); if (!a) return;
+  const n = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  const src = a.createBufferSource(), gn = a.createGain(), f = a.createBiquadFilter();
+  f.type = hp ? 'highpass' : 'lowpass'; f.frequency.value = cutoff;
+  src.buffer = buf; gn.gain.value = vol;
+  src.connect(f); f.connect(gn); gn.connect(a.destination); src.start();
+}
+const SFX = {
+  slap:   () => { noise(0.08, 1800, 0.35, true); tone(500, 150, 0.06, 'square', 0.04); },
+  thud:   () => { noise(0.14, 500, 0.3); tone(120, 40, 0.16, 'triangle', 0.14); },
+  splat:  () => { noise(0.18, 900, 0.25); tone(300, 60, 0.2, 'sawtooth', 0.05); },
+  puf:    () => { noise(0.2, 400, 0.18); },
+  giggle: () => { tone(700, 900, 0.06, 'triangle', 0.05); setTimeout(() => tone(800, 1000, 0.06, 'triangle', 0.05), 90); setTimeout(() => tone(900, 1100, 0.06, 'triangle', 0.05), 180); },
+  crunch: () => { noise(0.1, 3000, 0.25, true); tone(400, 200, 0.05, 'square', 0.03); },
+  swish:  () => { noise(0.12, 2500, 0.1, true); },
+  peace:  () => { tone(500, 750, 0.12, 'triangle', 0.06); setTimeout(() => tone(750, 1000, 0.18, 'triangle', 0.06), 120); },
+};
+
+// ---------- Durum ----------
+const head = { a: 0, va: 0, ox: 0, vx: 0, oy: 0, sq: 0, face: 'happy', faceT: 0, side: 0, markT: 0, blink: 0, eyeX: 0, eyeY: 0 };
+let sel = 0;               // seçili eşya
+const strikes = [];        // devam eden vuruş animasyonları
+const fx = [];             // uçan yazılar
+const parts = [];          // parçacıklar
+const splats = [];         // yüze yapışan şeyler (kafa koordinatında)
+let bubble = '', bubbleT = 0;
+let hits = 0, combo = 0, comboT = 0, best = 0, recent = 0, recentT = 0, angryT = 0;
+let ptr = { x: 0, y: 0, on: false };
+let thumbT = 0;
+let t = 0;
+try { best = +localStorage.getItem('sk_best_combo') || 0; } catch (e) {}
+
+function say(s, f) { bubble = s; bubbleT = f || 70; }
+const pick = arr => arr[(Math.random() * arr.length) | 0];
+
+// ---------- Eşya çubuğu ----------
+ITEMS.forEach((it, i) => {
+  const b = document.createElement('button');
+  b.innerHTML = `<span class="ico">${it.ico}</span><span>${it.name}</span>`;
+  if (it.kind === 'peace') b.classList.add('peace');
+  b.addEventListener('pointerup', e => { e.preventDefault(); audio(); select(i); });
+  b.addEventListener('contextmenu', e => e.preventDefault());
+  bar.appendChild(b);
+});
+function select(i) {
+  const it = ITEMS[i];
+  if (it.kind === 'peace') { makePeace(); return; }
+  sel = i;
+  [...bar.children].forEach((b, j) => b.classList.toggle('sel', j === i));
+  tone(400, 600, 0.05, 'square', 0.03);
+}
+select(0);
+
+// ---------- Giriş ----------
+function toWorld(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / S, y: (e.clientY - r.top) / S }; }
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault(); audio();
+  const p = toWorld(e); ptr = { x: p.x, y: p.y, on: true };
+  strike(p.x, p.y);
+});
+cv.addEventListener('pointermove', e => { const p = toWorld(e); ptr.x = p.x; ptr.y = p.y; });
+cv.addEventListener('pointerup', () => { ptr.on = false; });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('keydown', e => {
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= ITEMS.length) select(n - 1);
+  if (e.key === ' ') strike(HX + (Math.random() < 0.5 ? -1 : 1) * K * 3, HY);
+});
+
+// ---------- Vuruş ----------
+function strike(x, y) {
+  const it = ITEMS[sel];
+  const dir = x < HX ? 1 : -1; // soldan vurulursa kafa sağa gider
+  if (it.kind === 'throw') {
+    strikes.push({ it, x, y, dir, t: 0, dur: 16, sx: HX + (Math.random() - 0.5) * W * 0.3, sy: H + 10 });
+    SFX.swish();
+  } else {
+    strikes.push({ it, x, y, dir, t: 0, dur: 9, hitAt: 4 });
+  }
+}
+function onHead(x, y) {
+  const dx = x - (HX + head.ox), dy = y - (HY + head.oy);
+  return Math.sqrt(dx * dx + dy * dy) <= K * 7.5;
+}
+function impact(s) {
+  const it = s.it;
+  if (!onHead(s.x, s.y)) {
+    SFX.swish();
+    fx.push({ s: 'ISKA', x: s.x, y: s.y - 6, vy: -0.4, life: 30, c: C.hud, k: 1 });
+    if (Math.random() < 0.4) say(pick(MISS_LINES), 50);
+    combo = 0;
+    return;
+  }
+  const p = it.power;
+  head.va += s.dir * 0.09 * p;
+  head.vx += s.dir * 2.2 * p;
+  head.sq = Math.max(head.sq, Math.min(0.22, 0.08 + 0.08 * p));
+  head.face = it.face; head.faceT = it.face === 'laugh' ? 60 : 55 + 25 * p;
+  head.side = -s.dir; head.markT = it.id === 'slap' ? 90 : 0;
+  hits++; combo = comboT > 0 ? combo + 1 : 1; comboT = 60;
+  if (combo > best) { best = combo; try { localStorage.setItem('sk_best_combo', best); } catch (e) {} }
+  recent++; recentT = 240;
+  (SFX[it.sfx] || SFX.slap)();
+  fx.push({ s: pick(it.words), x: s.x + s.dir * 4, y: s.y - 10, vy: -0.6, life: 32, c: C.gold, k: 2 });
+  if (combo > 1) fx.push({ s: 'X' + combo, x: s.x, y: s.y + 4, vy: -0.3, life: 40, c: C.white, k: 1 });
+  if (it.stars) for (let i = 0; i < 6; i++) parts.push({ kind: 'star', ang: i * Math.PI / 3, r: K * 7, life: 90, spin: 0.08 });
+  if (it.feathers) for (let i = 0; i < 8; i++) parts.push({ kind: 'feather', x: s.x, y: s.y, vx: (Math.random() - 0.5) * 1.5, vy: -Math.random() * 1.2, life: 60 + Math.random() * 40 });
+  if (it.id === 'snow') for (let i = 0; i < 10; i++) parts.push({ kind: 'snow', x: s.x, y: s.y, vx: (Math.random() - 0.5) * 2, vy: -Math.random() * 1.5, life: 40 + Math.random() * 20 });
+  if (it.id === 'slap' || it.id === 'slipper' || it.id === 'book') for (let i = 0; i < 5; i++) parts.push({ kind: 'spark', x: s.x, y: s.y, vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.7) * 2, life: 14 });
+  if (it.splat) {
+    splats.push({ kind: it.splat, lx: (s.x - (HX + head.ox)) / K, ly: (s.y - (HY + head.oy)) / K, life: 240 });
+    if (splats.length > 5) splats.shift();
+  }
+  if (recent >= 12 && angryT === 0) { angryT = 200; head.face = 'angry'; head.faceT = 200; say('Yeter artık ya!', 90); tone(200, 120, 0.3, 'sawtooth', 0.06); }
+  else if (Math.random() < 0.5 || combo === 1) say(pick(it.lines), 55);
+}
+function makePeace() {
+  const it = ITEMS[ITEMS.length - 1];
+  head.face = 'grin'; head.faceT = 120; angryT = 0; recent = 0; combo = 0; head.markT = 0;
+  splats.length = 0; thumbT = 120;
+  say(pick(it.lines), 100); SFX.peace();
+  for (let i = 0; i < 8; i++) parts.push({ kind: 'heart', x: HX + (Math.random() - 0.5) * K * 10, y: HY + (Math.random() - 0.5) * K * 6, vx: (Math.random() - 0.5) * 0.6, vy: -0.6 - Math.random() * 0.6, life: 60 + Math.random() * 30 });
+}
+
+// ---------- Çizim yardımcıları ----------
+function px(x, y, w, h, c) { cg.fillStyle = c; cg.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+function grid(rows, map, x, y, k) {
+  k = k || 1;
+  for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) {
+    const c = map[rows[j][i]]; if (c) px(x + i * k, y + j * k, k, k, c);
+  }
+}
+// 3x5 piksel font
+const FONT = {
+  A:'010|101|111|101|101', B:'110|101|110|101|110', C:'011|100|100|100|011', D:'110|101|101|101|110',
+  E:'111|100|110|100|111', F:'111|100|110|100|100', G:'011|100|101|101|011', H:'101|101|111|101|101',
+  I:'111|010|010|010|111', J:'001|001|001|101|010', K:'101|101|110|101|101', L:'100|100|100|100|111',
+  M:'101|111|111|101|101', N:'110|101|101|101|101', O:'010|101|101|101|010', P:'110|101|110|100|100',
+  Q:'010|101|101|111|011', R:'110|101|110|101|101', S:'011|100|010|001|110', T:'111|010|010|010|010',
+  U:'101|101|101|101|111', V:'101|101|101|101|010', W:'101|101|111|111|101', X:'101|101|010|101|101',
+  Y:'101|101|010|010|010', Z:'111|001|010|100|111',
+  0:'111|101|101|101|111', 1:'010|110|010|010|111', 2:'111|001|111|100|111', 3:'111|001|111|001|111',
+  4:'101|101|111|001|001', 5:'111|100|111|001|111', 6:'111|100|111|101|111', 7:'111|001|010|010|010',
+  8:'111|101|111|101|111', 9:'111|101|111|001|111',
+  '!':'010|010|010|000|010', '+':'000|010|111|010|000', '.':'000|000|000|000|010', ':':'000|010|000|010|000',
+  '-':'000|000|111|000|000', '?':'111|001|011|000|010', "'":'010|010|000|000|000', ',':'000|000|000|010|100',
+  ' ':'000|000|000|000|000',
+};
+const TR = { 'İ':'I','Ş':'S','Ğ':'G','Ü':'U','Ö':'O','Ç':'C' };
+function norm(s) { return String(s).toLocaleUpperCase('tr').replace(/[İŞĞÜÖÇ]/g, ch => TR[ch]); }
+function textW(s, k) { k = k || 1; return norm(s).length * 4 * k - k; }
+function text(s, x, y, c, k, align, noShadow) {
+  k = k || 1; s = norm(s);
+  const w = textW(s, k);
+  let cx = align === 'center' ? Math.round(x - w / 2) : align === 'right' ? x - w : x;
+  for (const ch of s) {
+    const gl = FONT[ch];
+    if (gl) {
+      const rows = gl.split('|');
+      if (!noShadow) for (let j = 0; j < 5; j++) for (let i = 0; i < 3; i++) if (rows[j][i] === '1') px(cx + i * k + k, y + j * k + k, k, k, C.out);
+      for (let j = 0; j < 5; j++) for (let i = 0; i < 3; i++) if (rows[j][i] === '1') px(cx + i * k, y + j * k, k, k, c);
+    }
+    cx += 4 * k;
+  }
+}
+
+// ---------- Sahne ----------
+function drawScene() {
+  const bandY = Math.floor(H * 0.55);
+  px(0, 0, W, bandY, C.wallTop);
+  px(0, bandY, W, H - bandY, C.wallBand);
+  px(0, bandY, W, 1, C.wallLine);
+  for (let i = 0; i < 7; i++) px((i * 61 + 23) % W, bandY + 6 + (i * 37) % Math.max(10, H - bandY - 14), 2, 1, C.wallLine);
+  // duvar saati (sol, HUD'un altında)
+  const cx0 = 12, cy0 = 40;
+  px(cx0 - 5, cy0 - 5, 11, 11, C.out); px(cx0 - 4, cy0 - 4, 9, 9, C.white);
+  px(cx0, cy0 - 3, 1, 3, C.out); px(cx0, cy0, 3, 1, C.out); px(cx0, cy0, 1, 1, C.red);
+  // tahta (sağ üst)
+  const wy = 4, wh = Math.min(28, Math.floor(H * 0.12));
+  const bw = Math.min(46, Math.floor(W * 0.3)), bx = W - bw - 4;
+  px(bx - 1, wy - 1, bw + 2, wh + 2, C.out); px(bx, wy, bw, wh, '#2f5d46');
+  px(bx + 3, wy + 3, 9, 1, C.white); px(bx + 3, wy + 6, 14, 1, C.white); px(bx + 3, wy + 9, 6, 1, C.white);
+  px(bx + bw - 8, wy + wh - 4, 5, 2, '#e8e0c8');
+}
+
+// ---------- Omuz + kafa ----------
+function drawBody() {
+  const y0 = HY + 6 * K;
+  // omuzlar / polo
+  px(HX - 13 * K, y0 + 2 * K, 26 * K, H, C.out);
+  px(HX - 12 * K, y0 + 3 * K, 24 * K, H, C.red);
+  px(HX - 12 * K, y0 + 3 * K, 24 * K, K, C.redL);
+  px(HX - 12 * K, y0 + 3 * K, K, H, C.redD);
+  // yaka
+  px(HX - 4 * K, y0 + 2 * K, 3 * K, 3 * K, C.out); px(HX + 1 * K, y0 + 2 * K, 3 * K, 3 * K, C.out);
+  px(HX - 3.5 * K, y0 + 2.5 * K, 2 * K, 2 * K, C.redL); px(HX + 1.5 * K, y0 + 2.5 * K, 2 * K, 2 * K, C.redL);
+  px(HX - 0.5 * K, y0 + 4 * K, K, 4 * K, C.redD); px(HX - 0.25 * K, y0 + 5 * K, 0.5 * K, 0.5 * K, C.btn); px(HX - 0.25 * K, y0 + 7 * K, 0.5 * K, 0.5 * K, C.btn);
+  // boyun
+  px(HX - 2.5 * K, y0 - K, 5 * K, 4.5 * K, C.out);
+  px(HX - 2 * K, y0 - K, 4 * K, 4 * K, C.skin); px(HX - 2 * K, y0 - K, 4 * K, K, C.skinD);
+}
+
+function drawHead() {
+  const hd = head;
+  const shiver = hd.face === 'cold' ? ((t >> 1) & 1 ? 1 : -1) : 0;
+  const wob = hd.face === 'laugh' ? Math.sin(t * 0.6) * 0.05 : 0;
+  // kafayı önce kendi tuvaline çiz (döndürünce dikiş oluşmasın)
+  if (hc.width !== 14 * K) { hc.width = 14 * K; hc.height = 14 * K; }
+  hg.clearRect(0, 0, hc.width, hc.height);
+  cg = hg;
+  grid(HEAD, HEAD_MAP, 0, 0, K);
+  drawFace();
+  // yapışan şeyler
+  for (const sp of splats) {
+    const x = 7 * K + sp.lx * K, y = 7 * K + sp.ly * K, a = Math.min(1, sp.life / 40);
+    hg.globalAlpha = a;
+    if (sp.kind === 'tomato') {
+      px(x - 2 * K, y - 1 * K, 4 * K, 2 * K, C.tomD); px(x - 1.5 * K, y - 2 * K, 3 * K, 4 * K, C.tomD);
+      px(x - 1 * K, y - 1 * K, 2 * K, 1.5 * K, C.tom); px(x + 1.5 * K, y + 1.5 * K, K, K, C.tomD); px(x - 2.5 * K, y + 0.5 * K, K, K, C.tomD);
+      px(x - 0.5 * K, y + 2.5 * K + Math.min(3, (240 - sp.life) / 30) * K, K, 1.5 * K, C.tomD);
+    } else {
+      px(x - 2 * K, y - 1 * K, 4 * K, 2 * K, C.snowD); px(x - 1.5 * K, y - 1.5 * K, 3 * K, 2 * K, C.snow);
+      px(x + 1.5 * K, y + 1 * K, K, K, C.snow); px(x - 2.5 * K, y + 0.5 * K, K, K, C.snow);
+    }
+    hg.globalAlpha = 1;
+  }
+  cg = g;
+  g.save();
+  g.translate(HX + hd.ox + shiver, HY + 7 * K + hd.oy);  // boyun pivotu
+  g.rotate(hd.a + wob);
+  g.scale(1 + hd.sq, 1 - hd.sq);
+  g.imageSmoothingEnabled = false;
+  g.drawImage(hc, -7 * K, -14 * K);
+  g.restore();
+}
+
+// yüz: sprite-piksel koordinatında çizer (kafa sol-üst köşesi 0,0)
+function f(i, j, w, h, c) { px(i * K, j * K, w * K, h * K, c); }
+function drawFace() {
+  const hd = head, face = hd.face;
+  const ex = hd.eyeX, ey = hd.eyeY;
+  const blink = hd.blink > 0 && face === 'happy';
+  // kaşlar
+  if (face === 'angry') { f(3, 5, 1, 1, C.hair); f(4, 5.5, 2, 1, C.hair); f(8, 5.5, 2, 1, C.hair); f(10, 5, 1, 1, C.hair); }
+  else if (face === 'grumpy') { f(3, 5.5, 3, 1, C.hairL); f(8, 5.5, 3, 1, C.hairL); }
+  else if (face === 'ouch' || face === 'cold') { f(3, 4.5, 3, 1, C.hairL); f(8, 4.5, 3, 1, C.hairL); }
+  else { f(3, 5, 3, 1, C.hairL); f(8, 5, 3, 1, C.hairL); }
+  // gözler
+  if (face === 'happy' || face === 'grin' || face === 'laugh') {
+    if (blink) { f(3, 7, 4, 1, C.eye); f(8, 7, 4, 1, C.eye); }
+    else if (face === 'laugh') { f(3, 6, 1, 1, C.eye); f(4, 7, 2, 1, C.eye); f(6, 6, 1, 1, C.eye); f(8, 6, 1, 1, C.eye); f(9, 7, 2, 1, C.eye); f(11, 6, 1, 1, C.eye); }
+    else { // gülen kısık gözler (fotoğraftaki gibi)
+      f(3, 7, 1, 1, C.eye); f(4, 6, 2, 1, C.eye); f(6, 7, 1, 1, C.eye);
+      f(8, 7, 1, 1, C.eye); f(9, 6, 2, 1, C.eye); f(11, 7, 1, 1, C.eye);
+    }
+  } else if (face === 'ouch') {
+    f(3, 6, 1, 1, C.eye); f(4, 7, 1, 1, C.eye); f(5, 6, 1, 1, C.eye);
+    f(8, 6, 1, 1, C.eye); f(9, 7, 1, 1, C.eye); f(10, 6, 1, 1, C.eye);
+  } else if (face === 'dizzy') {
+    const sp = (t >> 2) & 1;
+    f(3, 6, 3, 3, C.eye); f(4, 7, 1, 1, sp ? C.eyeW : C.skin); f(3 + (sp ? 2 : 0), 6, 1, 1, C.skin);
+    f(8, 6, 3, 3, C.eye); f(9, 7, 1, 1, sp ? C.skin : C.eyeW); f(8 + (sp ? 0 : 2), 8, 1, 1, C.skin);
+  } else if (face === 'sleepy') {
+    f(3, 7, 3, 1, C.eye); f(8, 7, 3, 1, C.eye); f(4, 8, 1, 1, C.eye); f(9, 8, 1, 1, C.eye);
+  } else if (face === 'grumpy' || face === 'angry') {
+    f(3, 7, 3, 1, C.eye); f(8, 7, 3, 1, C.eye); f(4 + ex, 6.5, 1, 1, C.eye); f(9 + ex, 6.5, 1, 1, C.eye);
+  } else if (face === 'cold') {
+    f(3, 6, 3, 3, C.eyeW); f(8, 6, 3, 3, C.eyeW); f(4 + ex, 7 + ey, 1, 1, C.eye); f(9 + ex, 7 + ey, 1, 1, C.eye);
+  }
+  // burun + yanak
+  f(7, 9, 1, 1, C.skinD);
+  if (face !== 'cold') { f(2, 8, 1, 1, C.blush); f(11, 8, 1, 1, C.blush); }
+  // tokat izi
+  if (hd.markT > 0) { const mx = hd.side < 0 ? 1.5 : 8.5; f(mx, 7, 1, 3, C.mark); f(mx + 1, 6.5, 1, 4, C.mark); f(mx + 2, 7, 1, 3, C.mark); f(mx + 3, 7.5, 1, 2, C.mark); }
+  // ağız
+  if (face === 'happy') { f(3, 10, 1, 1, C.mouth); f(10, 10, 1, 1, C.mouth); f(4, 11, 6, 1, C.mouth); }
+  else if (face === 'grin' || face === 'laugh') { f(3, 10, 1, 1, C.mouth); f(10, 10, 1, 1, C.mouth); f(4, 11, 6, 2, C.mouth); f(5, 11, 4, 1, C.teeth); if (face === 'laugh') f(5, 12.5, 4, 0.5, C.tongue); }
+  else if (face === 'ouch' || face === 'dizzy') { f(5, 10, 4, 3, C.out); f(6, 12, 2, 1, C.tongue); }
+  else if (face === 'grumpy' || face === 'angry') { f(3, 12, 1, 1, C.mouth); f(10, 12, 1, 1, C.mouth); f(4, 11, 6, 1, C.mouth); }
+  else if (face === 'sleepy') { f(6, 11, 2, 1.5, C.mouth); }
+  else if (face === 'cold') { const w = (t >> 2) & 1; f(4, 11 + w * 0.5, 2, 1, C.lipCold); f(6, 11.5 - w * 0.5, 2, 1, C.lipCold); f(8, 11 + w * 0.5, 2, 1, C.lipCold); f(2, 3, 1, 1, C.snow); f(9, 2, 1, 1, C.snow); f(6, 1, 1, 1, C.snow); }
+}
+
+// ---------- Eşyalar ----------
+function drawItem(id, x, y, rot, k, flip) {
+  const s = SPR[id]; if (!s) return;
+  g.save(); g.translate(x, y); g.rotate(rot || 0); if (flip) g.scale(-1, 1);
+  grid(s.rows, s.map, -4 * k, -4 * k, k);
+  g.restore();
+}
+function drawStrikes() {
+  const k = Math.max(2, K - 1);
+  for (const s of strikes) {
+    const it = s.it;
+    if (it.kind === 'throw') {
+      const u = s.t / s.dur, e = 1 - (1 - u) * (1 - u);
+      const x = s.sx + (s.x - s.sx) * e, y = s.sy + (s.y - s.sy) * e - Math.sin(u * Math.PI) * 20;
+      drawItem(it.id, x, y, u * 6, k * (0.6 + 0.4 * e));
+    } else {
+      const u = Math.min(1, s.t / s.hitAt);
+      const back = (1 - u) * (1 - u);
+      const x = s.x - s.dir * (8 * K * back + K * 0.5), y = s.y - 6 * K * back;
+      if (s.t > s.hitAt) { // geri çekilme
+        const v = (s.t - s.hitAt) / (s.dur - s.hitAt);
+        drawItem(it.id, x - s.dir * v * 3 * K, y - v * 4 * K, -s.dir * v * 0.5, k, s.dir > 0);
+      } else drawItem(it.id, x, y, -s.dir * 1.2 * back, k, s.dir > 0);
+    }
+  }
+}
+function drawCursor() {
+  if (strikes.length || (ptr.x === 0 && ptr.y === 0)) return;
+  if (!ptr.on && !window.matchMedia('(hover: hover)').matches) return;
+  g.globalAlpha = 0.85;
+  drawItem(ITEMS[sel].id, ptr.x + 6, ptr.y - 6, 0, Math.max(2, K - 2), ptr.x < HX);
+  g.globalAlpha = 1;
+}
+
+// ---------- Parçacıklar + yazılar ----------
+function drawParts() {
+  for (const p of parts) {
+    if (p.kind === 'star') {
+      const x = HX + head.ox + Math.cos(p.ang) * p.r, y = HY - 6 * K + head.oy + Math.sin(p.ang) * p.r * 0.35;
+      px(x - 1, y, 3, 1, C.star); px(x, y - 1, 1, 3, C.star); px(x, y, 1, 1, C.white);
+    } else if (p.kind === 'feather') { px(p.x, p.y, 2, 1, C.fea); px(p.x, p.y + 1, 1, 1, C.feaD); }
+    else if (p.kind === 'snow') px(p.x, p.y, 1, 1, C.snow);
+    else if (p.kind === 'spark') px(p.x, p.y, 1, 1, C.gold);
+    else if (p.kind === 'heart') { px(p.x, p.y, 1, 1, '#e8506a'); px(p.x + 2, p.y, 1, 1, '#e8506a'); px(p.x, p.y + 1, 3, 1, '#e8506a'); px(p.x + 1, p.y + 2, 1, 1, '#e8506a'); }
+    else if (p.kind === 'z') text('Z', p.x, p.y, C.zz, 1, 'left', true);
+  }
+  for (const e of fx) text(e.s, e.x, e.y, e.c, e.k, 'center');
+}
+function drawBubble() {
+  if (bubbleT <= 0 || !bubble) return;
+  let k = K >= 5 ? 2 : 1;
+  if (textW(bubble, k) + 6 * k > W - 4) k = 1;
+  const bw = textW(bubble, k) + 6 * k, bh = 5 * k + 4 * k;
+  let bx = HX + head.ox + 6 * K - bw / 2; bx = Math.max(2, Math.min(W - bw - 2, bx));
+  const by = HY + head.oy - 7 * K - bh - 4 * k;
+  px(bx - 1, by - 1, bw + 2, bh + 2, C.out); px(bx, by, bw, bh, C.white);
+  const tx = Math.max(bx + 2, Math.min(bx + bw - 6, HX + head.ox + 4 * K));
+  px(tx, by + bh, 3, 2, C.out); px(tx, by + bh - 1, 3, 1, C.white); px(tx + 1, by + bh + 1, 1, 1, C.white);
+  text(bubble, bx + 3 * k, by + 2 * k, C.out, k, 'left', true);
+}
+function drawHUD() {
+  const y = 3;
+  const s1 = 'VURUS ' + hits, s2 = 'KOMBO X' + combo, s3 = 'REKOR X' + best;
+  const pw = Math.max(textW(s1), textW(s2), textW(s3)) + 6;
+  const x0 = 3;
+  px(x0, y - 2, pw, 25, 'rgba(26,16,19,0.82)');
+  text(s1, x0 + 3, y, C.hud); text(s2, x0 + 3, y + 8, comboT > 0 && combo > 1 ? C.gold : C.hud); text(s3, x0 + 3, y + 16, C.gold);
+  if (thumbT > 0) {
+    // barış: iki baş parmak omuzlardan yükselir
+    const u = Math.min(1, thumbT > 100 ? (120 - thumbT) / 20 : thumbT < 20 ? thumbT / 20 : 1);
+    drawItem('thumb', HX + 11 * K, HY + 10 * K - u * 9 * K, 0, Math.max(2, K - 1));
+    drawItem('thumb', HX - 11 * K, HY + 10 * K - u * 9 * K, 0, Math.max(2, K - 1), true);
+  }
+}
+
+// ---------- Güncelleme ----------
+function update() {
+  t++;
+  const hd = head;
+  // kafa fiziği (yay)
+  hd.va += -0.05 * hd.a; hd.va *= 0.9; hd.a += hd.va; hd.a = Math.max(-0.9, Math.min(0.9, hd.a));
+  hd.vx += -0.12 * hd.ox; hd.vx *= 0.85; hd.ox += hd.vx;
+  hd.oy = 0;
+  hd.sq *= 0.82; if (hd.sq < 0.005) hd.sq = 0;
+  if (hd.faceT > 0) { hd.faceT--; if (hd.faceT === 0) hd.face = 'happy'; }
+  if (hd.markT > 0) hd.markT--;
+  if (hd.face === 'sleepy' && t % 20 === 0) parts.push({ kind: 'z', x: HX + hd.ox + 6 * K, y: HY - 8 * K, vx: 0.2, vy: -0.4, life: 40 });
+  if (hd.face === 'laugh') hd.oy = ((t >> 2) & 1) ? -1 : 0;
+  // göz kırpma + gözlerin işaretçiyi takibi
+  if (hd.blink > 0) hd.blink--; else if (Math.random() < 0.008) hd.blink = 6;
+  const tx = Math.max(-1, Math.min(1, Math.round((ptr.x - HX) / (K * 8)))), ty = Math.max(-0.5, Math.min(0.5, (ptr.y - HY) / (K * 12)));
+  hd.eyeX = (ptr.x || ptr.y) ? tx : 0; hd.eyeY = (ptr.x || ptr.y) ? Math.round(ty * 2) / 2 : 0;
+
+  if (bubbleT > 0) bubbleT--;
+  if (comboT > 0) { comboT--; if (comboT === 0) combo = 0; }
+  if (recentT > 0) { recentT--; if (recentT === 0) recent = 0; }
+  if (angryT > 0) angryT--;
+  if (thumbT > 0) thumbT--;
+
+  for (let i = strikes.length - 1; i >= 0; i--) {
+    const s = strikes[i]; s.t++;
+    if (s.it.kind === 'throw') { if (s.t >= s.dur) { impact(s); strikes.splice(i, 1); } }
+    else { if (s.t === s.hitAt) impact(s); if (s.t >= s.dur) strikes.splice(i, 1); }
+  }
+  for (let i = fx.length - 1; i >= 0; i--) { const e = fx[i]; e.y += e.vy; e.life--; if (e.life <= 0) fx.splice(i, 1); }
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.life--;
+    if (p.kind === 'star') p.ang += p.spin;
+    else { p.x += p.vx; p.y += p.vy; if (p.kind === 'feather') { p.vy += 0.01; p.vx += Math.sin(t * 0.2 + i) * 0.03; } else if (p.kind === 'snow' || p.kind === 'spark') p.vy += 0.08; }
+    if (p.life <= 0) parts.splice(i, 1);
+  }
+  for (let i = splats.length - 1; i >= 0; i--) { splats[i].life--; if (splats[i].life <= 0) splats.splice(i, 1); }
+}
+
+// ---------- Döngü ----------
+let last = 0, acc = 0;
+function loop(ts) {
+  requestAnimationFrame(loop);
+  if (!last) last = ts;
+  acc += Math.min(100, ts - last); last = ts;
+  while (acc >= 1000 / 60) { update(); acc -= 1000 / 60; }
+  g.clearRect(0, 0, W, H);
+  drawScene();
+  drawBody();
+  drawHead();
+  drawStrikes();
+  drawParts();
+  drawBubble();
+  drawHUD();
+  drawCursor();
+  sc.clearRect(0, 0, cv.width, cv.height);
+  sc.imageSmoothingEnabled = false;
+  sc.drawImage(off, 0, 0, cv.width, cv.height);
+}
+
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+resize();
+say('Selam! Vurma ama...', 120);
+setTimeout(() => document.getElementById('tip').classList.add('hide'), 8000);
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

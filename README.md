@@ -30,13 +30,23 @@ Ya da repoyu GitHub Pages ile yayınlayıp linki telefonda açabilirsin.
 | 🛏️ Yastık | Yumuşak; tüyler uçuşur, uykusu gelir ("Z Z Z") |
 | 🪶 Tüy | Gıdıklar, kahkaha atar |
 | ⛄ Kartopu | Fırlatılır, üşür, dudakları morarır, titrer |
+| 📏 Cetvel | "TAK!", öğretmen usulü |
+| 🔨 Çekiç (oyuncak) | Sert; gözler döner, yıldızlar |
+| 🎒 Çanta | Fotoğraftaki siyah çanta; en ağır vuruş |
+| 🐟 Balık | "ŞLAP!", surat asar, kokudan şikayet eder |
+| 🍰 Pasta | Fırlatılır, krema yüze yapışır |
+| 🧽 Silgi | Fırlatılır, tebeşir tozu bulutu |
+| 🔫 Su tabancası | Su damlaları, ıslanır ve titrer |
 | 🤝 Barış | Sırıtır, iki baş parmak kaldırır (fotoğraftaki gibi), kalpler uçar; kombo ve lekeler sıfırlanır |
 
+- **CAN** barı var: sert eşyalar can götürür, yüzde morluklar birikir (mor → mavi → sararıp iyileşir),
+  can azalınca gözü morarır ve yanakları şişer. Can bitince **K.O.** olur, kafası yana yığılır;
+  **AYILT** ile geri gelir ve bir süre yanağında bandajla dolaşır. Yastık ve tüy can götürmez.
 - Kafa dışına dokunursan **ISKA** olur ve kombo sıfırlanır.
 - Kısa sürede art arda vurursan **KOMBO** artar; en yüksek kombo **REKOR** olarak tarayıcıda saklanır.
 - Kısa sürede çok vurursan kızar: "Yeter artık ya!"
 - Gözleri parmağını / fare imlecini takip eder, arada göz kırpar.
-- Klavye: `1`–`9` eşya seçer, `Boşluk` vurur.
+- Klavye: `1`–`9` eşya seçer, `Boşluk` vurur, `R` ayıltır.
 
 ## Teknik
 
